@@ -1,0 +1,16 @@
+{
+  "name": "AeroSync India - Weather-Chemistry AQI",
+  "short_name": "AeroSync",
+  "description": "72-Hour Coupled Weather–Chemistry AQI Forecasting for Every Village, Town & City Worldwide",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#070b14",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍃</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
