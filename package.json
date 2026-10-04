@@ -1,10 +1,10 @@
 {
+  "name": "aerosync-india",
+  "private": true,
+  "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
-    "build": "vite",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "vite": "^6.0.0"
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview"
   }
 }
