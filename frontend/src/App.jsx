@@ -19,10 +19,9 @@ import CurrentAqiCard from './components/CurrentAqiCard';
 import ForecastChart from './components/ForecastChart';
 import InversionCard from './components/InversionCard';
 import PlumeCard from './components/PlumeCard';
-import MapView from './components/MapView';
 import CompareModal from './components/CompareModal';
 import ErrorBoundary from './components/ErrorBoundary';
-import { getForecast, getInversion, getFires, getPlume, getMapStations } from './api';
+import { getForecast, getInversion, getFires, getPlume } from './api';
 
 export default function App() {
   const [selectedCity, setSelectedCity] = useState({
@@ -37,7 +36,6 @@ export default function App() {
   const [inversion, setInversion] = useState(null);
   const [plume, setPlume] = useState(null);
   const [fires, setFires] = useState([]);
-  const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
 
@@ -86,12 +84,8 @@ export default function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        const [firesData, stationsData] = await Promise.all([
-          getFires(24),
-          getMapStations(),
-        ]);
+        const firesData = await getFires(24);
         setFires(firesData.features || []);
-        setStations(stationsData.stations || []);
       } catch (err) {
         console.error('Failed to fetch initial map data:', err);
       }
@@ -220,18 +214,7 @@ export default function App() {
           />
         </section>
 
-        {/* Interactive Worldwide Map */}
-        <section>
-          <ErrorBoundary fallbackTitle="Map Component Encountered a Problem">
-            <MapView
-              stations={stations}
-              fires={fires}
-              onSelectCity={handleCitySelect}
-              selectedCityCoords={{ lat: selectedCity.lat, lon: selectedCity.lon }}
-              selectedCityName={selectedCity.city}
-            />
-          </ErrorBoundary>
-        </section>
+
       </main>
 
       {/* Footer */}
