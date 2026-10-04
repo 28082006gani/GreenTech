@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, CircleMarker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { Flame, Layers, Radio, Globe, Navigation, MousePointerClick } from 'lucide-react';
+import { Flame, Layers, Radio, Globe, Navigation, MousePointerClick, ExternalLink, Map as MapIcon } from 'lucide-react';
 import { reverseGeocode } from '../api';
+
+const CARTO_EMBED_URL = 'https://thunbergii.app.carto.com/map/4cc066b3-2c8d-4ab3-880c-edd205747cb6';
+const CARTO_BUILDER_URL = 'https://thunbergii.app.carto.com/builder/4cc066b3-2c8d-4ab3-880c-edd205747cb6';
 
 // Controller to smoothly pan/zoom map to selected city and invalidate size
 function ChangeView({ center, zoom }) {
@@ -10,7 +13,6 @@ function ChangeView({ center, zoom }) {
   useEffect(() => {
     if (center && !isNaN(center[0]) && !isNaN(center[1])) {
       map.flyTo(center, zoom, { duration: 1.5 });
-      // Invalidate size to ensure tile grid refreshes without grey artifacting
       setTimeout(() => {
         map.invalidateSize();
       }, 300);
@@ -58,6 +60,7 @@ function MapClickHandler({ onMapClick }) {
 }
 
 export default function MapView({ stations, fires, onSelectCity, selectedCityCoords, selectedCityName }) {
+  const [mapEngine, setMapEngine] = useState('leaflet'); // 'leaflet' | 'carto'
   const [showStations, setShowStations] = useState(true);
   const [showFires, setShowFires] = useState(true);
 
@@ -86,174 +89,233 @@ export default function MapView({ stations, fires, onSelectCity, selectedCityCoo
 
   return (
     <div className="glass-panel rounded-3xl p-6 border border-slate-800 shadow-2xl relative">
-      {/* Header and Filter Switches */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-800">
+      {/* Header, Map Engine Switcher & Layer Toggles */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-slate-800">
         <div>
           <div className="flex items-center gap-2">
             <Globe className="w-5 h-5 text-emerald-400" />
             <h2 className="text-xl font-bold text-slate-100">
-              Interactive Worldwide AQI & Stubble Fire Map
+              {mapEngine === 'carto' ? 'CARTO Cloud Intelligence Spatial Map' : 'Interactive Worldwide AQI & Stubble Fire Map'}
             </h2>
           </div>
           <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
             <MousePointerClick className="w-3.5 h-3.5 text-sky-400" />
-            Click anywhere on the globe to inspect any village, town or coordinate.
+            {mapEngine === 'carto'
+              ? 'Embedded high-performance CARTO Builder spatial layers.'
+              : 'Click anywhere on the globe to inspect any village, town or coordinate.'}
           </p>
         </div>
 
-        {/* Map Layers Toggle */}
-        <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
-          <button
-            onClick={() => setShowStations(!showStations)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
-              showStations
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-            Key Stations ({stations?.length || 0})
-          </button>
+        {/* Engine Tabs & Controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Map Engine Toggle */}
+          <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setMapEngine('leaflet')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                mapEngine === 'leaflet'
+                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>Live Leaflet Map</span>
+            </button>
 
-          <button
-            onClick={() => setShowFires(!showFires)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
-              showFires
-                ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Flame className="w-3.5 h-3.5 text-orange-400" />
-            Stubble Fires ({fires?.length || 0})
-          </button>
+            <button
+              onClick={() => setMapEngine('carto')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                mapEngine === 'carto'
+                  ? 'bg-sky-500 text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <MapIcon className="w-3.5 h-3.5" />
+              <span>CARTO Builder</span>
+            </button>
+          </div>
+
+          {mapEngine === 'leaflet' && (
+            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+              <button
+                onClick={() => setShowStations(!showStations)}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
+                  showStations
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                Stations ({stations?.length || 0})
+              </button>
+
+              <button
+                onClick={() => setShowFires(!showFires)}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
+                  showFires
+                    ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Flame className="w-3 h-3 text-orange-400" />
+                Fires ({fires?.length || 0})
+              </button>
+            </div>
+          )}
+
+          {mapEngine === 'carto' && (
+            <a
+              href={CARTO_BUILDER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 transition flex items-center gap-1.5"
+            >
+              <span>Open in CARTO Builder</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
         </div>
       </div>
 
-      {/* Map Container */}
-      <div className="h-[480px] w-full rounded-2xl overflow-hidden mt-4 border border-slate-800 relative z-10">
-        <MapContainer
-          center={defaultCenter}
-          zoom={5}
-          scrollWheelZoom={true}
-          style={{ height: '100%', width: '100%' }}
-        >
-          <ChangeView center={center} zoom={zoomLevel} />
-          <MapClickHandler onMapClick={onSelectCity} />
+      {/* Map View Area */}
+      <div className="h-[520px] w-full rounded-2xl overflow-hidden mt-4 border border-slate-800 relative z-10 bg-slate-950">
+        {mapEngine === 'carto' ? (
+          <div className="relative w-full h-full">
+            <iframe
+              src={CARTO_EMBED_URL}
+              width="100%"
+              height="100%"
+              frameBorder="0"
+              title="CARTO Geospatial Map"
+              className="w-full h-full rounded-2xl"
+              allowFullScreen
+            />
+          </div>
+        ) : (
+          <MapContainer
+            center={defaultCenter}
+            zoom={5}
+            scrollWheelZoom={true}
+            style={{ height: '100%', width: '100%' }}
+          >
+            <ChangeView center={center} zoom={zoomLevel} />
+            <MapClickHandler onMapClick={onSelectCity} />
 
-          {/* CartoDB Dark Matter Tiles */}
-          <TileLayer
-            attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://openstreetmap.org">OSM</a>'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          />
+            {/* CartoDB Dark Matter Tiles */}
+            <TileLayer
+              attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://openstreetmap.org">OSM</a>'
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            />
 
-          {/* Active Fire Points (NASA FIRMS) */}
-          {showFires &&
-            fires?.map((fire, idx) => {
-              const [lon, lat] = fire.geometry.coordinates;
-              const { frp_mw, region } = fire.properties;
-              return (
-                <CircleMarker
-                  key={`fire-${idx}`}
-                  center={[lat, lon]}
-                  radius={Math.min(8, Math.max(3, frp_mw / 25))}
-                  pathOptions={{
-                    fillColor: '#f97316',
-                    color: '#ea580c',
-                    weight: 1,
-                    opacity: 0.9,
-                    fillOpacity: 0.75,
-                  }}
-                >
-                  <Popup>
-                    <div className="p-1 text-xs">
-                      <div className="font-bold text-orange-400 flex items-center gap-1">
-                        <Flame className="w-3.5 h-3.5" /> Active Stubble Hotspot
+            {/* Active Fire Points (NASA FIRMS) */}
+            {showFires &&
+              fires?.map((fire, idx) => {
+                const [lon, lat] = fire.geometry.coordinates;
+                const { frp_mw, region } = fire.properties;
+                return (
+                  <CircleMarker
+                    key={`fire-${idx}`}
+                    center={[lat, lon]}
+                    radius={Math.min(8, Math.max(3, frp_mw / 25))}
+                    pathOptions={{
+                      fillColor: '#f97316',
+                      color: '#ea580c',
+                      weight: 1,
+                      opacity: 0.9,
+                      fillOpacity: 0.75,
+                    }}
+                  >
+                    <Popup>
+                      <div className="p-1 text-xs">
+                        <div className="font-bold text-orange-400 flex items-center gap-1">
+                          <Flame className="w-3.5 h-3.5" /> Active Stubble Hotspot
+                        </div>
+                        <div className="text-slate-300 mt-1">Region: {region}</div>
+                        <div className="text-slate-400">Fire Radiative Power: {frp_mw} MW</div>
+                        <div className="text-slate-500 text-[10px] mt-0.5">
+                          Coords: {lat.toFixed(3)}°N, {lon.toFixed(3)}°E
+                        </div>
                       </div>
-                      <div className="text-slate-300 mt-1">Region: {region}</div>
-                      <div className="text-slate-400">Fire Radiative Power: {frp_mw} MW</div>
-                      <div className="text-slate-500 text-[10px] mt-0.5">
-                        Coords: {lat.toFixed(3)}°N, {lon.toFixed(3)}°E
-                      </div>
-                    </div>
-                  </Popup>
-                </CircleMarker>
-              );
-            })}
+                    </Popup>
+                  </CircleMarker>
+                );
+              })}
 
-          {/* City Monitoring Stations */}
-          {showStations &&
-            stations?.map((st) => {
-              const aqiColor = getAqiColor(st.aqi);
-              return (
-                <CircleMarker
-                  key={`st-${st.id}`}
-                  center={[st.lat, st.lon]}
-                  radius={7}
-                  pathOptions={{
-                    fillColor: aqiColor,
-                    color: '#ffffff',
-                    weight: 1.5,
-                    opacity: 0.9,
-                    fillOpacity: 0.85,
-                  }}
-                  eventHandlers={{
-                    click: () => onSelectCity(st),
-                  }}
-                >
-                  <Popup>
-                    <div className="p-1 text-xs min-w-[150px]">
-                      <div className="flex items-center justify-between font-bold text-slate-100 border-b border-slate-700 pb-1 mb-1.5">
-                        <span>{st.city}</span>
-                        <span
-                          className="px-1.5 py-0.5 rounded text-[10px] font-extrabold"
-                          style={{ backgroundColor: aqiColor, color: '#ffffff' }}
+            {/* City Monitoring Stations */}
+            {showStations &&
+              stations?.map((st) => {
+                const aqiColor = getAqiColor(st.aqi);
+                return (
+                  <CircleMarker
+                    key={`st-${st.id}`}
+                    center={[st.lat, st.lon]}
+                    radius={7}
+                    pathOptions={{
+                      fillColor: aqiColor,
+                      color: '#ffffff',
+                      weight: 1.5,
+                      opacity: 0.9,
+                      fillOpacity: 0.85,
+                    }}
+                    eventHandlers={{
+                      click: () => onSelectCity(st),
+                    }}
+                  >
+                    <Popup>
+                      <div className="p-1 text-xs min-w-[150px]">
+                        <div className="flex items-center justify-between font-bold text-slate-100 border-b border-slate-700 pb-1 mb-1.5">
+                          <span>{st.city}</span>
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[10px] font-extrabold"
+                            style={{ backgroundColor: aqiColor, color: '#ffffff' }}
+                          >
+                            AQI {st.aqi}
+                          </span>
+                        </div>
+                        <div className="text-slate-300">Category: {st.category}</div>
+                        <div className="text-slate-300">Dominant: {st.dominant}</div>
+                        <div className="text-slate-400">PM2.5: {st.pm25} µg/m³</div>
+                        <div className="text-slate-400">PBL Inversion: ΔT {st.inversion_strength_c}°C</div>
+                        <button
+                          onClick={() => onSelectCity(st)}
+                          className="mt-2 w-full text-center bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-1 px-2 rounded text-[11px] transition cursor-pointer"
                         >
-                          AQI {st.aqi}
-                        </span>
+                          Load 72h Forecast →
+                        </button>
                       </div>
-                      <div className="text-slate-300">Category: {st.category}</div>
-                      <div className="text-slate-300">Dominant: {st.dominant}</div>
-                      <div className="text-slate-400">PM2.5: {st.pm25} µg/m³</div>
-                      <div className="text-slate-400">PBL Inversion: ΔT {st.inversion_strength_c}°C</div>
-                      <button
-                        onClick={() => onSelectCity(st)}
-                        className="mt-2 w-full text-center bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-1 px-2 rounded text-[11px] transition cursor-pointer"
-                      >
-                        Load 72h Forecast →
-                      </button>
-                    </div>
-                  </Popup>
-                </CircleMarker>
-              );
-            })}
+                    </Popup>
+                  </CircleMarker>
+                );
+              })}
 
-          {/* Active Pin for Selected Village/Town/City */}
-          {selectedCityCoords && (
-            <CircleMarker
-              center={[selectedCityCoords.lat, selectedCityCoords.lon]}
-              radius={10}
-              pathOptions={{
-                fillColor: '#38bdf8',
-                color: '#ffffff',
-                weight: 2.5,
-                opacity: 1,
-                fillOpacity: 0.9,
-              }}
-            >
-              <Popup>
-                <div className="p-1 text-xs font-semibold text-sky-400">
-                  📍 {selectedCityName || 'Selected Location'}
-                  <div className="text-slate-400 font-mono text-[10px]">
-                    {selectedCityCoords.lat.toFixed(3)}°, {selectedCityCoords.lon.toFixed(3)}°
+            {/* Active Pin for Selected Village/Town/City */}
+            {selectedCityCoords && (
+              <CircleMarker
+                center={[selectedCityCoords.lat, selectedCityCoords.lon]}
+                radius={10}
+                pathOptions={{
+                  fillColor: '#38bdf8',
+                  color: '#ffffff',
+                  weight: 2.5,
+                  opacity: 1,
+                  fillOpacity: 0.9,
+                }}
+              >
+                <Popup>
+                  <div className="p-1 text-xs font-semibold text-sky-400">
+                    📍 {selectedCityName || 'Selected Location'}
+                    <div className="text-slate-400 font-mono text-[10px]">
+                      {selectedCityCoords.lat.toFixed(3)}°, {selectedCityCoords.lon.toFixed(3)}°
+                    </div>
                   </div>
-                </div>
-              </Popup>
-            </CircleMarker>
-          )}
-        </MapContainer>
+                </Popup>
+              </CircleMarker>
+            )}
+          </MapContainer>
+        )}
       </div>
 
-      {/* Legend Bar */}
+      {/* Footer / Legend Bar */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
         <div className="flex flex-wrap items-center gap-3">
           <span className="font-semibold text-slate-300">NAQI Scale:</span>
@@ -284,12 +346,16 @@ export default function MapView({ stations, fires, onSelectCity, selectedCityCoo
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onSelectCity({ city: 'Delhi', state: 'Delhi', country: 'India', lat: 28.6139, lon: 77.2090 })}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] transition cursor-pointer"
-          >
-            Reset to India
-          </button>
+          {mapEngine === 'leaflet' ? (
+            <button
+              onClick={() => onSelectCity({ city: 'Delhi', state: 'Delhi', country: 'India', lat: 28.6139, lon: 77.2090 })}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] transition cursor-pointer"
+            >
+              Reset to India
+            </button>
+          ) : (
+            <span className="text-slate-400 text-[11px]">CARTO Location Intelligence Platform Active</span>
+          )}
         </div>
       </div>
     </div>
